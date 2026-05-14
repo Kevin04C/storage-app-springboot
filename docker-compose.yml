@@ -18,5 +18,5 @@ services:
     volumes:
       # Mapeamos una carpeta de tu VPS al contenedor
       # Izquierda: Ruta en tu VPS (/var/www/storage) | Derecha: Ruta en el contenedor (/app/data)
-      - /var/www/storage:/app/data
+      - /opt/storage:/app/data
     restart: unless-stopped
