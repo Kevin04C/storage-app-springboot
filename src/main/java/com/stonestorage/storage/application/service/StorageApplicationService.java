@@ -40,7 +40,6 @@ public class StorageApplicationService implements UploadFileUseCase, DownloadFil
 
     private final FileMetadataRepository fileMetadataRepository;
     private final StorageDomainService storageDomainService;
-    private final ClientDomainService clientDomainService;
     private final ClientRepository clientRepository;
     private final PathSanitizer pathSanitizer;
     private final StorageProvider storageProvider;
@@ -78,10 +77,12 @@ public class StorageApplicationService implements UploadFileUseCase, DownloadFil
                     FileMetadata metadata = storageDomainService.createMetadata(
                             clientId, request.originalName(), systemName, checksum, finalSize, request.visibility(), storagePath);
 
+                    long finalUsedBytes = usedBytes + finalSize;
+
                     return storageProvider.save(new ByteArrayInputStream(bytes), absolutePath)
                             .then(fileMetadataRepository.save(metadata))
                             .flatMap(saved -> clientRepository
-                                    .updateUsedBytes(clientId, usedBytes + finalSize)
+                                    .updateUsedBytes(clientId, finalUsedBytes)
                                     .thenReturn(saved)
                             )
                             .map(saved -> new UploadResponse(
