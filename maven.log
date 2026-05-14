@@ -1,0 +1,42 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] --------------------< com.uploadfiles:stonestorage >--------------------
+[INFO] Building StoneStorage 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.5.0:clean (default-clean) @ stonestorage ---
+[INFO] Deleting D:\dev\uploadfiles\target
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ stonestorage ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 2 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ stonestorage ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 61 source files with javac [debug parameters release 21] to target\classes
+[INFO] /D:/dev/uploadfiles/src/main/java/com/stonestorage/shared/infrastructure/web/ApiResponseExceptionHandler.java: Some input files use or override a deprecated API.
+[INFO] /D:/dev/uploadfiles/src/main/java/com/stonestorage/shared/infrastructure/web/ApiResponseExceptionHandler.java: Recompile with -Xlint:deprecation for details.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ stonestorage ---
+[INFO] skip non existing resourceDirectory D:\dev\uploadfiles\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ stonestorage ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 5 source files with javac [debug parameters release 21] to target\test-classes
+[INFO] 
+[INFO] --- surefire:3.5.5:test (default-test) @ stonestorage ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.4.2:jar (default-jar) @ stonestorage ---
+[INFO] Building jar: D:\dev\uploadfiles\target\stonestorage-0.0.1-SNAPSHOT.jar
+[INFO] 
+[INFO] --- spring-boot:4.0.6:repackage (repackage) @ stonestorage ---
+[INFO] Replacing main artifact D:\dev\uploadfiles\target\stonestorage-0.0.1-SNAPSHOT.jar with repackaged archive, adding nested dependencies in BOOT-INF/.
+[INFO] The original artifact has been renamed to D:\dev\uploadfiles\target\stonestorage-0.0.1-SNAPSHOT.jar.original
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  12.850 s
+[INFO] Finished at: 2026-05-11T22:49:18-05:00
+[INFO] ------------------------------------------------------------------------

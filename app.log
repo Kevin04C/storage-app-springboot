@@ -1,0 +1,16 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.0.6)
+
+2026-05-12T00:50:10.738-05:00  INFO 23708 --- [stonestorage] [           main] c.s.bootstrap.StoneStorageApplication    : Starting StoneStorageApplication v0.0.1-SNAPSHOT using Java 21.0.8 with PID 23708 (D:\dev\uploadfiles\target\stonestorage-0.0.1-SNAPSHOT.jar started by kevin in D:\dev\uploadfiles)
+2026-05-12T00:50:10.753-05:00  INFO 23708 --- [stonestorage] [           main] c.s.bootstrap.StoneStorageApplication    : No active profile set, falling back to 1 default profile: "default"
+2026-05-12T00:50:14.771-05:00  INFO 23708 --- [stonestorage] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data R2DBC repositories in DEFAULT mode.
+2026-05-12T00:50:14.837-05:00  INFO 23708 --- [stonestorage] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 47 ms. Found 0 R2DBC repository interfaces.
+2026-05-12T00:50:34.681-05:00  INFO 23708 --- [stonestorage] [           main] o.s.boot.reactor.netty.NettyWebServer    : Netty started on port 8080 (http)
+2026-05-12T00:50:34.744-05:00  INFO 23708 --- [stonestorage] [           main] c.s.bootstrap.StoneStorageApplication    : Started StoneStorageApplication in 25.292 seconds (process running for 26.807)
