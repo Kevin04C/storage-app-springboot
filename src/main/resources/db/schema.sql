@@ -18,8 +18,8 @@ CREATE TABLE IF NOT EXISTS file_metadata (
     size_bytes BIGINT NOT NULL DEFAULT 0,
     visibility VARCHAR(20) NOT NULL DEFAULT 'PUBLIC',
     storage_path VARCHAR(2000) NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_file_metadata_client ON file_metadata(client_id);
