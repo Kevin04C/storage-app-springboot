@@ -1,6 +1,7 @@
 package com.stonestorage.storage.application.service;
 
 import com.stonestorage.client.domain.exception.QuotaExceededException;
+import com.stonestorage.client.domain.repository.ClientRepository;
 import com.stonestorage.client.domain.service.ClientDomainService;
 import com.stonestorage.shared.infrastructure.util.PathSanitizer;
 import com.stonestorage.storage.application.dto.FileContent;
@@ -40,6 +41,7 @@ public class StorageApplicationService implements UploadFileUseCase, DownloadFil
     private final FileMetadataRepository fileMetadataRepository;
     private final StorageDomainService storageDomainService;
     private final ClientDomainService clientDomainService;
+    private final ClientRepository clientRepository;
     private final PathSanitizer pathSanitizer;
     private final StorageProvider storageProvider;
 
@@ -78,10 +80,10 @@ public class StorageApplicationService implements UploadFileUseCase, DownloadFil
 
                     return storageProvider.save(new ByteArrayInputStream(bytes), absolutePath)
                             .then(fileMetadataRepository.save(metadata))
-                            .flatMap(saved -> {
-                                // Actualizar used_bytes del cliente
-                                return Mono.just(saved);
-                            })
+                            .flatMap(saved -> clientRepository
+                                    .updateUsedBytes(clientId, usedBytes + finalSize)
+                                    .thenReturn(saved)
+                            )
                             .map(saved -> new UploadResponse(
                                     saved.getId(),
                                     saved.getOriginalName(),
