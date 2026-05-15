@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS storage_clients (
     quota_bytes BIGINT NOT NULL DEFAULT 0,
     used_bytes BIGINT NOT NULL DEFAULT 0,
     is_active BOOLEAN NOT NULL DEFAULT true,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS file_metadata (
