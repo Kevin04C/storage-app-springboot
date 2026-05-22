@@ -4,19 +4,21 @@ services:
   app:
     build: .
     container_name: stonestorage_app
+    restart: unless-stopped
     ports:
       - "8082:8080"
+    env_file: .env
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      # Conexión a la base de datos externa de tu VPS
-      - SPRING_R2DBC_URL=r2dbc:postgresql://161.132.48.67:5432/storage_app
-      - SPRING_R2DBC_USERNAME=user_wqswkhkwi8
-      - SPRING_R2DBC_PASSWORD=pass_gpugphwlgv2zur
-      - STORAGE_TYPE=local
-      # Sobrescribimos la ruta de almacenamiento para usar una en Linux/Docker
-      - STORAGE_BASE_PATH=/app/data
+      - TZ=America/Lima
     volumes:
-      # Mapeamos una carpeta de tu VPS al contenedor
-      # Izquierda: Ruta en tu VPS (/var/www/storage) | Derecha: Ruta en el contenedor (/app/data)
       - /opt/storage:/app/data
-    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 30s

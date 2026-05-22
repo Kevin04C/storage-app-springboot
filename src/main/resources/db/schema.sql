@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS storage_clients (
     quota_bytes BIGINT NOT NULL DEFAULT 0,
     used_bytes BIGINT NOT NULL DEFAULT 0,
     is_active BOOLEAN NOT NULL DEFAULT true,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS file_metadata (
@@ -18,8 +18,8 @@ CREATE TABLE IF NOT EXISTS file_metadata (
     size_bytes BIGINT NOT NULL DEFAULT 0,
     visibility VARCHAR(20) NOT NULL DEFAULT 'PUBLIC',
     storage_path VARCHAR(2000) NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
 );
 
 CREATE INDEX IF NOT EXISTS idx_file_metadata_client ON file_metadata(client_id);

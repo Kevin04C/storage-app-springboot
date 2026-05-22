@@ -1,44 +1,39 @@
-# Etapa 1: Construcción (Build)
-FROM eclipse-temurin:21-jdk-alpine AS builder
-
-# Establecer el directorio de trabajo
+FROM maven:3.9-eclipse-temurin-21 AS builder
 WORKDIR /app
 
-# Copiar el wrapper de maven y los archivos de dependencias
-COPY .mvn/ .mvn/
-COPY mvnw pom.xml ./
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
 
-# Dar permisos de ejecución al wrapper de Maven
-RUN chmod +x ./mvnw
+COPY src ./src
+RUN mvn package -DskipTests -B
 
-# Descargar las dependencias (ideal para cachear de Docker)
-RUN ./mvnw dependency:go-offline -B
-
-# Copiar el código fuente
-COPY src/ src/
-
-# Construir la aplicación (omitiendo tests para acelerar el build para esta imagen)
-RUN ./mvnw clean package -DskipTests
-
-# Etapa 2: Producción (Ejecución)
-FROM eclipse-temurin:21-jre-alpine
-
-# Establecer el directorio de trabajo
+FROM eclipse-temurin:21-jre AS extractor
 WORKDIR /app
-
-# Mejores prácticas de seguridad: no correr como root
-RUN addgroup -S springg && adduser -S springu -G springg
-USER springu:springg
-
-# Copiar el .jar compilado desde la etapa "builder"
-# Spring Boot Maven Plugin genera normalmente un único archivo .jar
 COPY --from=builder /app/target/*.jar app.jar
+RUN java -Djarmode=layertools -jar app.jar extract
 
-# Exponer el puerto por defecto de Spring Boot (WebFlux)
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+COPY --from=extractor --chown=appuser:appuser /app/dependencies/ ./
+COPY --from=extractor --chown=appuser:appuser /app/spring-boot-loader/ ./
+COPY --from=extractor --chown=appuser:appuser /app/snapshot-dependencies/ ./
+COPY --from=extractor --chown=appuser:appuser /app/application/ ./
+
+USER appuser
+
 EXPOSE 8080
 
-# Variable de entorno para configuraciones extra de la JVM
-ENV JAVA_OPTS=""
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8080/actuator/health || exit 1
 
-# Comando para iniciar la aplicación (permite perfil activo por variable de entorno y pasar el JAVA_OPTS)
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+ENTRYPOINT ["java", \
+    "-XX:+UseContainerSupport", \
+    "-XX:MaxRAMPercentage=75.0", \
+    "-XX:+ExitOnOutOfMemoryError", \
+    "-Djava.security.egd=file:/dev/./urandom", \
+    "org.springframework.boot.loader.launch.JarLauncher"]
