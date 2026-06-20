@@ -38,7 +38,7 @@ public class LocalStorageProvider implements StorageProvider {
             if (!Files.exists(path)) {
                 return Flux.error(new RuntimeException("File not found: " + fullPath));
             }
-            return DataBufferUtils.read(path, DefaultDataBufferFactory.sharedInstance, 8192);
+            return DataBufferUtils.read(path, DefaultDataBufferFactory.sharedInstance, 65536);
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
