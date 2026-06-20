@@ -9,10 +9,12 @@ import com.stonestorage.shared.domain.exception.DomainException;
 import com.stonestorage.shared.infrastructure.web.dto.ApiResponse;
 import com.stonestorage.storage.domain.exception.FileNotFoundException;
 import com.stonestorage.storage.domain.exception.StorageException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.resource.NoResourceFoundException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebExceptionHandler;
@@ -20,6 +22,7 @@ import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
 
+@Slf4j
 @Component
 @Order(-2)
 public class ApiResponseExceptionHandler implements WebExceptionHandler {
@@ -62,6 +65,11 @@ public class ApiResponseExceptionHandler implements WebExceptionHandler {
         } else if (ex instanceof DomainException) {
             status = HttpStatus.BAD_REQUEST;
             code = "DOMAIN_ERROR";
+        } else if (ex instanceof NoResourceFoundException nre) {
+            status = HttpStatus.valueOf(nre.getStatusCode().value());
+            code = status.name();
+        } else {
+            log.error("Unexpected error: {}", ex.getMessage(), ex);
         }
 
         if (details == null || details.isBlank()) {

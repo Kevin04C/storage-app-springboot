@@ -23,6 +23,7 @@ com.stonestorage
 ├── shared
 │   ├── domain
 │   │   ├── exception
+│   │   ├── port
 │   │   └── valueobject
 │   └── infrastructure
 │       ├── config
@@ -33,8 +34,7 @@ com.stonestorage
 │   ├── domain
 │   │   ├── entity
 │   │   ├── exception
-│   │   ├── repository
-│   │   └── service
+│   │   └── repository
 │   ├── application
 │   │   ├── dto
 │   │   ├── port
@@ -42,16 +42,15 @@ com.stonestorage
 │   │   └── service
 │   └── infrastructure
 │       ├── persistence
-│       │   └── entity
+│       │   ├── entity
+│       │   └── adapter
 │       └── web
-│           └── interceptor
 └── storage
     ├── domain
     │   ├── entity
     │   ├── exception
     │   ├── port
-    │   ├── repository
-    │   └── service
+    │   └── repository
     ├── application
     │   ├── dto
     │   ├── port
@@ -68,7 +67,7 @@ com.stonestorage
 
 | Principio | Aplicación |
 |-----------|------------|
-| **SRP** | Cada clase tiene una sola razón de cambio. Por ejemplo, `ClientDomainService` solo gestiona lógica de cliente/cuota. |
+| **SRP** | Cada clase tiene una sola razón de cambio. Por ejemplo, `Client` encapsula estado y reglas de cuota, `ClientApplicationService` orquesta casos de uso. |
 | **OCP** | `StorageProvider` es una interfaz abierta a extensión (`LocalStorageProvider`, `S3StorageProvider`). |
 | **LSP** | Los proveedores de almacenamiento son intercambiables sin afectar a la capa de aplicación. |
 | **ISP** | Los casos de uso (`UploadFileUseCase`, `DownloadFileUseCase`) son interfaces pequeñas y enfocadas. |
@@ -109,7 +108,7 @@ com.stonestorage
 |-----|----------------|
 | Independencia de infraestructura | Propiedad `storage.type=local|s3` |
 | Soft Delete | Campo `deleted_at` en `file_metadata` |
-| Rendimiento | Caché con Caffeine para API Keys y cuotas |
+| Rendimiento | Caché con Caffeine para API Keys, metadata de archivos y thumbnails |
 | Consistencia | Todas las fechas en `TIMESTAMPTZ` (UTC) |
 
 ## 7. Tecnologías
@@ -227,7 +226,7 @@ Todas las respuestas de error —incluyendo errores de autenticación, excepcion
 
 | Componente | Propósito |
 |------------|-----------|
-| `ApiResponseExceptionHandler` | `WebExceptionHandler` con `@Order(-2)` que intercepta **todas** las excepciones no manejadas y las serializa como `ApiResponse` usando `ObjectMapper`. |
+| `ApiResponseExceptionHandler` | `WebExceptionHandler` con `@Order(-2)` que intercepta **todas** las excepciones no manejadas (incluyendo las que antes manejaba `GlobalExceptionHandler`) y las serializa como `ApiResponse` usando `ObjectMapper`. |
 | `SecurityConfig` | Configura `ServerAuthenticationFailureHandler` y `ServerAuthenticationEntryPoint` personalizados para que los errores 401 de Spring Security retornen `ApiResponse` JSON en lugar de respuestas vacías. |
 | `JacksonConfig` | Expone un bean `ObjectMapper` utilizado por los handlers de error para serializar respuestas. |
 
@@ -338,9 +337,6 @@ volumes:
 ```bash
 # Compilar
 ./mvnw clean compile
-
-# Ejecutar tests
-./mvnw test
 
 # Ejecutar aplicación
 ./mvnw spring-boot:run

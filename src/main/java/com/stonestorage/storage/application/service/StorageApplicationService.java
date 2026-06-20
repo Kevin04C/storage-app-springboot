@@ -1,9 +1,8 @@
 package com.stonestorage.storage.application.service;
 
 import com.stonestorage.client.domain.exception.QuotaExceededException;
-import com.stonestorage.client.domain.repository.ClientRepository;
-import com.stonestorage.client.domain.service.ClientDomainService;
-import com.stonestorage.shared.infrastructure.util.PathSanitizer;
+import com.stonestorage.shared.domain.port.ClientQuotaPort;
+import com.stonestorage.shared.domain.port.PathSanitizerPort;
 import com.stonestorage.storage.application.dto.FileContent;
 import com.stonestorage.storage.application.dto.FileNodeResponse;
 import com.stonestorage.storage.application.dto.UploadRequest;
@@ -14,10 +13,11 @@ import com.stonestorage.storage.domain.exception.FileNotFoundException;
 import com.stonestorage.storage.domain.exception.StorageException;
 import com.stonestorage.storage.domain.port.StorageProvider;
 import com.stonestorage.storage.domain.repository.FileMetadataRepository;
-import com.stonestorage.storage.domain.service.StorageDomainService;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.io.IOUtils;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,10 +39,10 @@ import java.util.UUID;
 public class StorageApplicationService implements UploadFileUseCase, DownloadFileUseCase, ListFilesUseCase, DeleteFileUseCase, GenerateThumbnailUseCase, PreviewFileUseCase {
 
     private final FileMetadataRepository fileMetadataRepository;
-    private final StorageDomainService storageDomainService;
-    private final ClientRepository clientRepository;
-    private final PathSanitizer pathSanitizer;
+    private final ClientQuotaPort clientQuotaPort;
+    private final PathSanitizerPort pathSanitizer;
     private final StorageProvider storageProvider;
+    private final DataBufferFactory dataBufferFactory;
 
     @Override
     @Transactional
@@ -54,12 +54,7 @@ public class StorageApplicationService implements UploadFileUseCase, DownloadFil
                     dataBuffer.read(bytes);
                     DataBufferUtils.release(dataBuffer);
 
-                    if (request.sizeBytes() > 0 && bytes.length != request.sizeBytes()) {
-                        return Mono.error(new StorageException("Content size mismatch"));
-                    }
-
-                    long finalSize = request.sizeBytes() > 0 ? request.sizeBytes() : bytes.length;
-                    if (usedBytes + finalSize > quotaBytes) {
+                    if (usedBytes + bytes.length > quotaBytes) {
                         return Mono.error(new QuotaExceededException("Quota exceeded. Available: " + (quotaBytes - usedBytes)));
                     }
 
@@ -68,20 +63,18 @@ public class StorageApplicationService implements UploadFileUseCase, DownloadFil
                     String path = request.path();
                     String systemName = generateSystemName(request.originalName());
                     String filePath = (path.endsWith("/") ? path : path + "/") + systemName;
-                    
-                    // Ruta relativa para BD (sin storage.base-path)
+
                     String storagePath = pathSanitizer.sanitize(baseDir, filePath);
-                    // Ruta absoluta para guardar en disco
                     String absolutePath = pathSanitizer.toAbsolutePath(storagePath);
 
-                    FileMetadata metadata = storageDomainService.createMetadata(
-                            clientId, request.originalName(), systemName, checksum, finalSize, request.visibility(), storagePath);
+                    FileMetadata metadata = FileMetadata.create(
+                            clientId, request.originalName(), systemName, checksum, bytes.length, request.visibility(), storagePath);
 
-                    long finalUsedBytes = usedBytes + finalSize;
+                    long finalUsedBytes = usedBytes + bytes.length;
 
                     return storageProvider.save(new ByteArrayInputStream(bytes), absolutePath)
                             .then(fileMetadataRepository.save(metadata))
-                            .flatMap(saved -> clientRepository
+                            .flatMap(saved -> clientQuotaPort
                                     .updateUsedBytes(clientId, finalUsedBytes)
                                     .thenReturn(saved)
                             )
@@ -108,7 +101,7 @@ public class StorageApplicationService implements UploadFileUseCase, DownloadFil
                             .flatMapMany(is -> {
                                 try {
                                     byte[] bytes = IOUtils.toByteArray(is);
-                                    return Flux.just(org.springframework.core.io.buffer.DefaultDataBufferFactory.sharedInstance.wrap(bytes));
+                                    return Flux.just(dataBufferFactory.wrap(bytes));
                                 } catch (IOException e) {
                                     return Flux.error(new StorageException("Failed to read file", e));
                                 }
@@ -126,9 +119,7 @@ public class StorageApplicationService implements UploadFileUseCase, DownloadFil
                         .map(is -> {
                             try {
                                 byte[] bytes = IOUtils.toByteArray(is);
-                                Flux<DataBuffer> content = Flux.just(
-                                        org.springframework.core.io.buffer.DefaultDataBufferFactory.sharedInstance.wrap(bytes)
-                                );
+                                Flux<DataBuffer> content = Flux.just(dataBufferFactory.wrap(bytes));
                                 return FileContent.builder()
                                         .fileName(fm.getOriginalName())
                                         .sizeBytes(fm.getSizeBytes())
@@ -159,6 +150,7 @@ public class StorageApplicationService implements UploadFileUseCase, DownloadFil
     }
 
     @Override
+    @Cacheable(value = "thumbnails", key = "#fullPath + ':' + #width + 'x' + #height")
     public Mono<byte[]> generate(String fullPath, int width, int height) {
         return storageProvider.load(fullPath)
                 .publishOn(Schedulers.boundedElastic())

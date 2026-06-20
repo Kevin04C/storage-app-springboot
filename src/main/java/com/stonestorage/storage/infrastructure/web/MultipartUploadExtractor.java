@@ -23,12 +23,13 @@ public class MultipartUploadExtractor {
 
             String path = extractPath(parts);
             FileVisibility visibility = extractVisibility(parts);
+            long sizeBytes = extractSizeBytes(fp);
 
             return Mono.just(new UploadRequest(
                     fp.filename(),
                     path,
                     fp.content(),
-                    0,
+                    sizeBytes,
                     visibility
             ));
         });
@@ -52,5 +53,11 @@ public class MultipartUploadExtractor {
             }
         }
         return FileVisibility.PUBLIC;
+    }
+
+    private long extractSizeBytes(FilePart filePart) {
+        var headers = filePart.headers();
+        var contentLength = headers.getContentLength();
+        return contentLength >= 0 ? contentLength : 0;
     }
 }

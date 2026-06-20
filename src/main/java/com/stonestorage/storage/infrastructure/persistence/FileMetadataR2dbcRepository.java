@@ -5,12 +5,13 @@ import com.stonestorage.storage.domain.entity.FileMetadata;
 import com.stonestorage.storage.domain.repository.FileMetadataRepository;
 import com.stonestorage.storage.infrastructure.persistence.entity.FileMetadataEntity;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.r2dbc.core.R2dbcEntityTemplate;
 import org.springframework.data.relational.core.query.Criteria;
 import org.springframework.data.relational.core.query.Query;
 import org.springframework.data.relational.core.query.Update;
 import org.springframework.stereotype.Component;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Instant;
@@ -23,6 +24,7 @@ public class FileMetadataR2dbcRepository implements FileMetadataRepository {
     private final R2dbcEntityTemplate template;
 
     @Override
+    @Cacheable(value = "fileMetadata", key = "#id")
     public Mono<FileMetadata> findById(UUID id) {
         return template.selectOne(Query.query(Criteria.where("id").is(id)), FileMetadataEntity.class)
                 .map(this::toDomain);
@@ -31,9 +33,6 @@ public class FileMetadataR2dbcRepository implements FileMetadataRepository {
     @Override
     public Mono<FileMetadata> save(FileMetadata fileMetadata) {
         FileMetadataEntity entity = toEntity(fileMetadata);
-        if (entity.getId() == null) {
-            entity.setId(UUID.randomUUID());
-        }
         if (entity.getCreatedAt() == null) {
             entity.setCreatedAt(Instant.now());
         }
@@ -41,6 +40,7 @@ public class FileMetadataR2dbcRepository implements FileMetadataRepository {
     }
 
     @Override
+    @CacheEvict(value = "fileMetadata", key = "#id")
     public Mono<Void> softDelete(UUID id) {
         return template.update(
                 Query.query(Criteria.where("id").is(id)),

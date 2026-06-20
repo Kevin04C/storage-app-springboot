@@ -10,7 +10,6 @@ import com.stonestorage.client.domain.entity.Client;
 import com.stonestorage.client.domain.exception.ClientAlreadyExistsException;
 import com.stonestorage.client.domain.exception.ClientNotFoundException;
 import com.stonestorage.client.domain.repository.ClientRepository;
-import com.stonestorage.client.domain.service.ClientDomainService;
 import com.stonestorage.shared.domain.valueobject.FriendlySize;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -25,7 +24,6 @@ import java.util.UUID;
 public class ClientApplicationService implements ValidateApiKeyUseCase, GetClientQuotaUseCase, RegisterClientUseCase {
 
     private final ClientRepository clientRepository;
-    private final ClientDomainService clientDomainService;
 
     @Override
     @Cacheable(value = "apiKeys", key = "#apiKey")
@@ -36,7 +34,6 @@ public class ClientApplicationService implements ValidateApiKeyUseCase, GetClien
     }
 
     @Override
-    @Cacheable(value = "quotas", key = "#clientId")
     public Mono<ClientQuotaInfo> getQuota(UUID clientId) {
         return clientRepository.findById(clientId)
                 .map(client -> ClientQuotaInfo.from(client.getQuotaBytes(), client.getUsedBytes()));
