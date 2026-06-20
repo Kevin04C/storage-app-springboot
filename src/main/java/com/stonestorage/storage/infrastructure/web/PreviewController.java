@@ -6,8 +6,11 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.CacheControl;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.MediaType;
+
+import java.time.Duration;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
@@ -50,6 +53,9 @@ public class PreviewController {
                             ContentDisposition.builder("inline").filename(fileName).build()
                     );
                     exchange.getResponse().getHeaders().setContentLength(fileContent.getSizeBytes());
+                    exchange.getResponse().getHeaders().setCacheControl(
+                            CacheControl.maxAge(Duration.ofDays(30)).cachePublic()
+                    );
 
                     return exchange.getResponse().writeWith(fileContent.getContent());
                 });
