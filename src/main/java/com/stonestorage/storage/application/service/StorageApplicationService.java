@@ -14,10 +14,8 @@ import com.stonestorage.storage.domain.exception.StorageException;
 import com.stonestorage.storage.domain.port.StorageProvider;
 import com.stonestorage.storage.domain.repository.FileMetadataRepository;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.io.IOUtils;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,7 +25,6 @@ import reactor.core.scheduler.Schedulers;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
@@ -42,7 +39,6 @@ public class StorageApplicationService implements UploadFileUseCase, DownloadFil
     private final ClientQuotaPort clientQuotaPort;
     private final PathSanitizerPort pathSanitizer;
     private final StorageProvider storageProvider;
-    private final DataBufferFactory dataBufferFactory;
 
     @Override
     @Transactional
@@ -97,16 +93,7 @@ public class StorageApplicationService implements UploadFileUseCase, DownloadFil
         return fileMetadataRepository.findById(fileId)
                 .filter(fm -> fm.getClientId().equals(clientId) && !fm.isDeleted())
                 .switchIfEmpty(Mono.error(new FileNotFoundException("File not found: " + fileId)))
-                .flatMapMany(fm -> storageProvider.load(pathSanitizer.toAbsolutePath(fm.getStoragePath()))
-                            .flatMapMany(is -> {
-                                try {
-                                    byte[] bytes = IOUtils.toByteArray(is);
-                                    return Flux.just(dataBufferFactory.wrap(bytes));
-                                } catch (IOException e) {
-                                    return Flux.error(new StorageException("Failed to read file", e));
-                                }
-                            })
-                );
+                .flatMapMany(fm -> storageProvider.load(pathSanitizer.toAbsolutePath(fm.getStoragePath())));
     }
 
     @Override
@@ -115,21 +102,14 @@ public class StorageApplicationService implements UploadFileUseCase, DownloadFil
                 .filter(fm -> !fm.isDeleted())
                 .filter(FileMetadata::isPublic)
                 .switchIfEmpty(Mono.error(new FileNotFoundException("File not found or not public: " + fileId)))
-                .flatMap(fm -> storageProvider.load(pathSanitizer.toAbsolutePath(fm.getStoragePath()))
-                        .map(is -> {
-                            try {
-                                byte[] bytes = IOUtils.toByteArray(is);
-                                Flux<DataBuffer> content = Flux.just(dataBufferFactory.wrap(bytes));
-                                return FileContent.builder()
-                                        .fileName(fm.getOriginalName())
-                                        .sizeBytes(fm.getSizeBytes())
-                                        .content(content)
-                                        .build();
-                            } catch (IOException e) {
-                                throw new StorageException("Failed to read file", e);
-                            }
-                        })
-                );
+                .flatMap(fm -> {
+                    Flux<DataBuffer> content = storageProvider.load(pathSanitizer.toAbsolutePath(fm.getStoragePath()));
+                    return Mono.just(FileContent.builder()
+                            .fileName(fm.getOriginalName())
+                            .sizeBytes(fm.getSizeBytes())
+                            .content(content)
+                            .build());
+                });
     }
 
     @Override
@@ -152,16 +132,19 @@ public class StorageApplicationService implements UploadFileUseCase, DownloadFil
     @Override
     @Cacheable(value = "thumbnails", key = "#fullPath + ':' + #width + 'x' + #height")
     public Mono<byte[]> generate(String fullPath, int width, int height) {
-        return storageProvider.load(fullPath)
+        return DataBufferUtils.join(storageProvider.load(fullPath))
                 .publishOn(Schedulers.boundedElastic())
-                .flatMap(inputStream -> {
+                .flatMap(dataBuffer -> {
+                    byte[] bytes = new byte[dataBuffer.readableByteCount()];
+                    dataBuffer.read(bytes);
+                    DataBufferUtils.release(dataBuffer);
                     try {
                         ByteArrayOutputStream os = new ByteArrayOutputStream();
-                        net.coobird.thumbnailator.Thumbnails.of(inputStream)
+                        net.coobird.thumbnailator.Thumbnails.of(new ByteArrayInputStream(bytes))
                                 .size(width, height)
                                 .toOutputStream(os);
                         return Mono.just(os.toByteArray());
-                    } catch (IOException e) {
+                    } catch (Exception e) {
                         return Mono.error(new StorageException("Thumbnail generation failed", e));
                     }
                 });

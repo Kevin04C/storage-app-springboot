@@ -2,6 +2,9 @@ package com.stonestorage.storage.infrastructure.provider;
 
 import com.stonestorage.storage.domain.entity.FileNode;
 import com.stonestorage.storage.domain.port.StorageProvider;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DefaultDataBufferFactory;
+import org.springframework.core.io.buffer.DataBufferUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -29,10 +32,13 @@ public class LocalStorageProvider implements StorageProvider {
     }
 
     @Override
-    public Mono<InputStream> load(String fullPath) {
-        return Mono.fromCallable(() -> {
+    public Flux<DataBuffer> load(String fullPath) {
+        return Flux.defer(() -> {
             Path path = Paths.get(fullPath);
-            return Files.newInputStream(path);
+            if (!Files.exists(path)) {
+                return Flux.error(new RuntimeException("File not found: " + fullPath));
+            }
+            return DataBufferUtils.read(path, DefaultDataBufferFactory.sharedInstance, 8192);
         }).subscribeOn(Schedulers.boundedElastic());
     }
 

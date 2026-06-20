@@ -2,6 +2,7 @@ package com.stonestorage.storage.infrastructure.provider;
 
 import com.stonestorage.storage.domain.entity.FileNode;
 import com.stonestorage.storage.domain.port.StorageProvider;
+import org.springframework.core.io.buffer.DataBuffer;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -15,8 +16,8 @@ public class S3StorageProvider implements StorageProvider {
     }
 
     @Override
-    public Mono<InputStream> load(String fullPath) {
-        return Mono.error(new UnsupportedOperationException("S3 provider not yet implemented"));
+    public Flux<DataBuffer> load(String fullPath) {
+        return Flux.error(new UnsupportedOperationException("S3 provider not yet implemented"));
     }
 
     @Override
